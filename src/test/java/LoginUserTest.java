@@ -4,71 +4,110 @@ import io.restassured.response.ValidatableResponse;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import net.datafaker.Faker;
+
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.CoreMatchers.equalTo;
 
 public class LoginUserTest {
     private ClUser userClient;
-    private User user;
-    private String accessToken; // Для хранения токена
+    private Faker faker;
+    private User testUser;
+    private String accessToken;
 
     @Before
     public void setUp() {
-        userClient = new ClUser(); // Инициализируем userClient
-        user = new User("bskurnikova@yandex.ru", "123", "batonov");
-        ValidatableResponse response = userClient.createUser(user); // Создаём пользователя и получаем ответ
-        accessToken = response.extract().path("accessToken");
+        userClient = new ClUser();
+        faker = new Faker();
     }
 
     @Test
-    @DisplayName("Логин существующего пользователя.")
+    @DisplayName("Логин существующего пользователя")
     @Description("Post запрос на ручку /api/auth/login")
     public void loginWithUserTrueAndBody() {
-        ValidatableResponse responseLogin = userClient.loginUser(user);
-        responseLogin.assertThat().statusCode(HTTP_OK);
-        responseLogin.assertThat().body("success", equalTo(true));
-        responseLogin.assertThat().body("accessToken", startsWith("Bearer "))
-                .and()
-                .body("refreshToken", notNullValue());
-        responseLogin.assertThat().body("user.email", equalTo(user.getEmail()))
-                .and()
-                .body("user.name", equalTo(user.getName()));
+        testUser = new User(
+                faker.internet().emailAddress(),
+                faker.regexify("[a-zA-Z0-9]{8,12}"),
+                faker.name().firstName()
+        );
+
+        ValidatableResponse createResponse = userClient.createUser(testUser);
+        createResponse.assertThat().statusCode(HTTP_OK);
+        accessToken = createResponse.extract().path("accessToken");
+
+        ValidatableResponse loginResponse = userClient.loginUser(testUser);
+        loginResponse.assertThat()
+                .statusCode(HTTP_OK)
+                .body("success", equalTo(true))
+                .body("accessToken", startsWith("Bearer "))
+                .body("refreshToken", notNullValue())
+                .body("user.email", equalTo(testUser.getEmail()))
+                .body("user.name", equalTo(testUser.getName()));
     }
 
     @Test
-    @DisplayName("Логин с неверным адресом почты.")
+    @DisplayName("Логин с неверным адресом почты")
     @Description("Post запрос на ручку /api/auth/login")
     public void loginWithUserFalseAndBody() {
-        User invalidUser = new User("invalid@google.com", user.getPassword(), user.getName());
+        testUser = new User(
+                faker.internet().emailAddress(),
+                "secure_password_123",
+                faker.name().firstName()
+        );
+
+        ValidatableResponse createResponse = userClient.createUser(testUser);
+        createResponse.assertThat().statusCode(HTTP_OK);
+
+        User invalidUser = new User(
+                "invalid_" + faker.internet().emailAddress(),
+                testUser.getPassword(),
+                testUser.getName()
+        );
+
         ValidatableResponse loginResponse = userClient.loginUser(invalidUser);
-        loginResponse.assertThat().statusCode(HTTP_UNAUTHORIZED);
-        loginResponse.assertThat().body("success", equalTo(false))
-                .and()
+        loginResponse.assertThat()
+                .statusCode(HTTP_UNAUTHORIZED)
+                .body("success", equalTo(false))
                 .body("message", equalTo("email or password are incorrect"));
     }
 
     @Test
-    @DisplayName("Логин под неверным паролем.")
+    @DisplayName("Логин под неверным паролем")
     @Description("Post запрос на ручку /api/auth/login")
     public void loginWithUserFalsePasswordAndBody() {
-        User invalidUser = new User(user.getEmail(), "188N70a", user.getName());
-        ValidatableResponse loginResponse = userClient.loginUser(invalidUser);
+        testUser = new User(
+                faker.internet().emailAddress(),
+                "secure_password_123",
+                faker.name().firstName()
+        );
 
-        loginResponse.assertThat().statusCode(HTTP_UNAUTHORIZED);
-        loginResponse.assertThat().body("success", equalTo(false))
-                .and()
+        ValidatableResponse createResponse = userClient.createUser(testUser);
+        createResponse.assertThat().statusCode(HTTP_OK);
+
+        User invalidUser = new User(
+                testUser.getEmail(),
+                "wrong_password_" + faker.random().nextInt(100, 999), // Исправлено: random().nextInt()
+                testUser.getName()
+        );
+
+        ValidatableResponse loginResponse = userClient.loginUser(invalidUser);
+        loginResponse.assertThat()
+                .statusCode(HTTP_UNAUTHORIZED)
+                .body("success", equalTo(false))
                 .body("message", equalTo("email or password are incorrect"));
     }
 
     @After
     public void clearData() {
-        try {
-            userClient.deleteUser(accessToken);
-        } catch (Exception e) {
-            System.out.println("Пользователь не удалился. Возможно ошибка при создании");
+        if (accessToken != null && !accessToken.isEmpty()) {
+            try {
+                userClient.deleteUser(accessToken);
+            } catch (Exception e) {
+                System.err.println("Ошибка при удалении пользователя: " + e.getMessage());
+            }
         }
     }
 }
+

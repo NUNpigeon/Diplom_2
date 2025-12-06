@@ -7,14 +7,14 @@ import org.junit.Test;
 
 public class ChangeUserDataTest {
     private ClUser clUser;
-    private String accessToken; // Для хранения токена
+    private String accessToken;
 
     @Before
     public void setUp() {
         clUser = new ClUser();
         User user = new User("bskurnikova@yandex.ru", "123", "batonov");
-        ValidatableResponse response = clUser.createUser(user); // Получаем ответ при создании
-        accessToken = response.extract().path("accessToken"); // Извлекаем токен
+        ValidatableResponse response = clUser.createUser(user);
+        accessToken = response.extract().path("accessToken");
     }
 
     @Test

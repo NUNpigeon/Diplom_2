@@ -9,6 +9,7 @@ import org.junit.Assert;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import static org.apache.http.HttpStatus.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.empty;
@@ -16,8 +17,8 @@ import static org.hamcrest.Matchers.empty;
 public class GetOrderUserTest {
     private ClUser userClient;
     private ClOrder orderClient;
-    private Order order;
     private String accessToken;
+    private ValidatableResponse createdOrderResponse;
 
     @Before
     public void setUp() {
@@ -30,19 +31,26 @@ public class GetOrderUserTest {
 
         User testUser = new User(uniqueEmail, "secure_password123", uniqueName);
 
-        // Инициализация объекта Order
+
         ArrayList<String> ingredients = new ArrayList<>();
         ingredients.add("61c0c5a71f815400326104a3");
         ingredients.add("61c0c5a71f815400326104a1");
-        order = new Order(ingredients);
+        Order order = new Order(ingredients);
 
         try {
-            // Получаем ответ и проверяем статус
+
             ValidatableResponse response = userClient.createUser(testUser);
-            response.statusCode(200);
+            response.statusCode(SC_OK);
             accessToken = response.extract().path("accessToken");
+
+
+            createdOrderResponse = orderClient.orderWithAuth(accessToken, order);
+            createdOrderResponse
+                    .statusCode(SC_OK)
+                    .body("success", equalTo(true));
+
         } catch (Exception e) {
-            handleError("Ошибка при создании пользователя", e);
+            handleError("Ошибка при подготовке тестовых данных (создание пользователя/заказа)", e);
         }
     }
 
@@ -55,18 +63,13 @@ public class GetOrderUserTest {
     @Description("Get запрос на ручку api/orders")
     public void getOrderAuthUser() {
         try {
-            Assert.assertNotNull(accessToken, "AccessToken должен быть получен");
+            Assert.assertNotNull("AccessToken должен быть получен", accessToken);
+            Assert.assertNotNull("Заказ должен быть создан", createdOrderResponse);
 
-            // Создаём заказ
-            ValidatableResponse createOrderResponse = orderClient.orderWithAuth(accessToken, order);
-            createOrderResponse
-                    .statusCode(200)
-                    .body("success", equalTo(true));
 
-            // Получаем список заказов
             ValidatableResponse getOrdersResponse = orderClient.getOrderUserAuth(accessToken);
             getOrdersResponse
-                    .statusCode(200)
+                    .statusCode(SC_OK)
                     .body("success", equalTo(true))
                     .body("orders", not(empty()))
                     .body("orders[0].ingredients", not(empty()));
@@ -80,17 +83,12 @@ public class GetOrderUserTest {
     @Description("Get запрос на ручку api/orders")
     public void getOrderNotAuthUser() {
         try {
-            // Проверяем наличие токена
-            Assert.assertNotNull(accessToken, "AccessToken должен быть получен");
-
-            // Создаём заказ
-            orderClient.orderWithAuth(accessToken, order)
-                    .statusCode(200)
-                    .body("success", equalTo(true));
+            Assert.assertNotNull("AccessToken должен быть получен", accessToken);
+            Assert.assertNotNull("Заказ должен быть создан", createdOrderResponse);
 
             // Пытаемся получить заказы без авторизации
             orderClient.getOrderUserNotAuth()
-                    .statusCode(401)
+                    .statusCode(SC_UNAUTHORIZED)
                     .body("success", equalTo(false))
                     .body("message", equalTo("You should be authorised"));
         } catch (Exception e) {

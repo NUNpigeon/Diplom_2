@@ -15,12 +15,17 @@ public class UserTest {
     @Before
     public void setUp() {
         creatingUser = new ClUser();
-        user = new User("bskurnikova@yandex.ru", "123", "batonov");
+
+        user = new User(
+                "user+" + System.currentTimeMillis() + "@example.com",
+                "123",
+                "batonov"
+        );
     }
 
     @Test
-    @DisplayName("Создать уникального пользователя.")
-    @Description("Post запрос на ручку /api/auth/register")
+    @DisplayName("Создать уникального пользователя")
+    @Description("POST запрос на /api/auth/register")
     public void createUniqueUserAndBodyTest() {
         try {
             ValidatableResponse response = creatingUser.createUser(user);
@@ -39,10 +44,13 @@ public class UserTest {
     }
 
     @Test
-    @DisplayName("Создать пользователя, который уже зарегистрирован.")
-    @Description("Post запрос на ручку /api/auth/register")
+    @DisplayName("Создать пользователя, который уже зарегистрирован")
+    @Description("POST запрос на /api/auth/register")
     public void createRegisteredUserAndBodyTest() {
+        // Сначала создаём пользователя
         creatingUser.createUser(user);
+
+
         ValidatableResponse response = creatingUser.createUser(user);
         response
                 .statusCode(403)
@@ -51,53 +59,54 @@ public class UserTest {
     }
 
     @Test
-    @DisplayName("Создать пользователя и не заполнить пароль.")
-    @Description("Post запрос на ручку /api/auth/register")
+    @DisplayName("Создать пользователя без пароля")
+    @Description("POST запрос на /api/auth/register")
     public void createUserWithoutPasswordTest() {
         User userWithoutPassword = new User(user.getEmail(), null, user.getName());
         ValidatableResponse response = creatingUser.createUser(userWithoutPassword);
         response
-                .statusCode(403) // API возвращает 403, а не 400
+                .statusCode(403)
                 .body("success", equalTo(false))
                 .body("message", equalTo("Email, password and name are required fields"));
     }
 
     @Test
-    @DisplayName("Создать пользователя без заполнения поля почты.")
-    @Description("Post запрос на ручку /api/auth/register")
+    @DisplayName("Создать пользователя без email")
+    @Description("POST запрос на /api/auth/register")
     public void createUserWithoutEmailTest() {
         User userWithoutEmail = new User(null, user.getPassword(), user.getName());
         ValidatableResponse response = creatingUser.createUser(userWithoutEmail);
         response
-                .statusCode(403)  // API возвращает 403, а не 400
+                .statusCode(403)
                 .body("success", equalTo(false))
                 .body("message", equalTo("Email, password and name are required fields"));
     }
 
     @Test
-    @DisplayName("Создать пользователя без заполнения поля имя пользователя.")
-    @Description("Post запрос на ручку /api/auth/register")
+    @DisplayName("Создать пользователя без имени")
+    @Description("POST запрос на /api/auth/register")
     public void createUserWithoutNameTest() {
         User userWithoutName = new User(user.getEmail(), user.getPassword(), null);
         ValidatableResponse response = creatingUser.createUser(userWithoutName);
         response
-                .statusCode(403) // API возвращает 403, а не 400
+                .statusCode(403)
                 .body("success", equalTo(false))
                 .body("message", equalTo("Email, password and name are required fields"));
     }
 
     @After
     public void clearData() {
-        if (accessToken != null) {
+        if (accessToken != null && !accessToken.trim().isEmpty()) {
             try {
+                // Удаляем "Bearer " из токена
                 String accessTokenValue = accessToken.replace("Bearer ", "");
                 creatingUser.deleteUser(accessTokenValue);
-                System.out.println("Пользователь успешно удален.");
+                System.out.println("Пользователь успешно удалён.");
             } catch (Exception e) {
                 System.err.println("Ошибка при удалении пользователя: " + e.getMessage());
             }
         } else {
-            System.out.println("Токен отсутствует. Пользователь не был удален.");
+            System.out.println("Токен отсутствует или пуст. Пользователь не был удалён.");
         }
     }
 }

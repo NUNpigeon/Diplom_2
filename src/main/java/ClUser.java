@@ -12,7 +12,7 @@ public class ClUser extends PageURL {
                 .spec(getPageURL())
                 .body(user)
                 .when()
-                .post("/api/auth/register")
+                .post(Endpoints.BASE_REGISTER)
                 .then();
     }
 
@@ -22,7 +22,7 @@ public class ClUser extends PageURL {
                 .spec(getPageURL())
                 .body(user)
                 .when()
-                .post("/api/auth/login")
+                .post(Endpoints.BASE_LOGIN)
                 .then();
     }
 
@@ -31,7 +31,7 @@ public class ClUser extends PageURL {
         given()
                 .spec(getPageURL())
                 .auth().oauth2(accessToken)
-                .delete("/api/auth/user")
+                .delete(Endpoints.BASE_USER)
                 .then();
     }
 
@@ -41,7 +41,7 @@ public class ClUser extends PageURL {
                 .spec(getPageURL())
                 .body(user)
                 .auth().oauth2(accessToken)
-                .patch("/api/auth/user")
+                .patch(Endpoints.BASE_USER)
                 .then();
     }
 
@@ -50,7 +50,7 @@ public class ClUser extends PageURL {
         return given()
                 .spec(getPageURL())
                 .body(user)
-                .patch("/api/auth/user")
+                .patch(Endpoints.BASE_USER)
                 .then();
     }
 }
