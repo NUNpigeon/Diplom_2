@@ -1,4 +1,5 @@
 # Автотесты для API Stellar Burgers
+(Дипломный проект) Diplom_2
 
 
 [![Java](https://img.shields.io/badge/Java-11+-blue)](https://www.java.com)
