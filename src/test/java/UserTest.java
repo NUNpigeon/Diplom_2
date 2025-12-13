@@ -55,7 +55,7 @@ public class UserTest {
         response
                 .statusCode(403)
                 .body("success", equalTo(false))
-                .body("message", equalTo("User already exists"));
+                .body("message", equalTo("Пользователь уже существует"));
     }
 
     @Test
@@ -67,7 +67,7 @@ public class UserTest {
         response
                 .statusCode(403)
                 .body("success", equalTo(false))
-                .body("message", equalTo("Email, password and name are required fields"));
+                .body("message", equalTo("Email, пароль и имя являются обязательными полями"));
     }
 
     @Test
@@ -79,7 +79,7 @@ public class UserTest {
         response
                 .statusCode(403)
                 .body("success", equalTo(false))
-                .body("message", equalTo("Email, password and name are required fields"));
+                .body("message", equalTo("Email, пароль и имя являются обязательными полями"));
     }
 
     @Test
@@ -91,14 +91,14 @@ public class UserTest {
         response
                 .statusCode(403)
                 .body("success", equalTo(false))
-                .body("message", equalTo("Email, password and name are required fields"));
+                .body("message", equalTo("Email, пароль и имя являются обязательными полями"));
     }
 
     @After
     public void clearData() {
         if (accessToken != null && !accessToken.trim().isEmpty()) {
             try {
-                // Удаляем "Bearer " из токена
+
                 String accessTokenValue = accessToken.replace("Bearer ", "");
                 creatingUser.deleteUser(accessTokenValue);
                 System.out.println("Пользователь успешно удалён.");

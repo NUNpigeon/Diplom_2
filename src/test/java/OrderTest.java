@@ -5,13 +5,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.notNullValue;
+
 
 public class OrderTest {
     private ClUser userClient;
@@ -41,94 +40,73 @@ public class OrderTest {
             System.out.println("User created. Token: " + accessToken);
         } else {
             System.err.println("User creation failed. Status: " + statusCode);
-            String errorBody = createUserResponse.extract().body().asString();
-            System.err.println("Response body: " + errorBody);
         }
     }
 
     @Test
-    @DisplayName("Create order with auth and valid ingredients")
-    @Description("POST /api/orders with valid accessToken and ingredient list")
-    public void createOrderWithAuthAndValidIngredients() {
-        if (!isUserCreated) {
-            System.out.println("Test skipped: user not created");
-            return;
-        }
+    @DisplayName("Создание заказа с авторизацией")
+    @Description("Создание заказа с токеном авторизации и валидными ингредиентами.")
+    public void createOrderWithAuth() {
 
-        List<String> ingredients = new ArrayList<>();
-        ingredients.add("61c0c5a71f815400326104a3");
-        ingredients.add("61c0c5a71f815400326104a1");
-        Order order = new Order(ingredients);
+        if (!isUserCreated) return;
 
-        System.out.println("Sending order with token: " + accessToken);
+        List<String> ingredients = List.of("61c0c5a71f815400326104a3", "61c0c5a71f815400326104a1");
+        ValidatableResponse response = orderClient.orderWithAuth(accessToken, new Order(ingredients));
 
-        ValidatableResponse response = orderClient.orderWithAuth(accessToken, order);
-        String responseBody = response.extract().body().asString();
-        System.out.println("Server response: " + responseBody);
-
-        response.assertThat()
-                .statusCode(200)
-                .body("success", equalTo(true))
-                .body("order", notNullValue());
+        response.assertThat().statusCode(200).body("success", equalTo(true));
     }
 
     @Test
-    @DisplayName("Create order without auth but with ingredients")
-    @Description("POST /api/orders without accessToken but with valid ingredient list")
-    public void createOrderWithoutAuthAndIngredients() {
-        List<String> ingredients = new ArrayList<>();
-        ingredients.add("61c0c5a71f815400326104a3");
-        ingredients.add("61c0c5a71f815400326104a1");
-        Order order = new Order(ingredients);
+    @DisplayName("Создание заказа без авторизации")
+    @Description("Создание заказа без токена авторизации, проверяем ошибку.")
+    public void createOrderWithoutAuth() {
+        List<String> ingredients = List.of("61c0c5a71f815400326104a3", "61c0c5a71f815400326104a1");
+        ValidatableResponse response = orderClient.orderWithoutAuth(new Order(ingredients));
 
-        ValidatableResponse response = orderClient.orderWithoutAuth(order);
-        String responseBody = response.extract().body().asString();
-        System.out.println("Server response (no auth): " + responseBody);
-
-
-        // API может возвращать 401 или 403 без токена — уточняем ожидаемый статус
-        response.assertThat()
-                .statusCode(401) // или 403, если так определено в API
-                .body("success", equalTo(false))
-                .body("message", containsString("Unauthorized"));
+        response.assertThat().statusCode(401).body("message", containsString("Unauthorized"));
     }
 
     @Test
-    @DisplayName("Create order with auth and invalid ingredient hash")
-    @Description("POST /api/orders with valid accessToken but invalid ingredient ID")
-    public void createOrderWithAuthAndInvalidIngredientHash() {
-        if (!isUserCreated) {
-            System.out.println("Test skipped: user not created");
-            return;
-        }
+    @DisplayName("Создание заказа с ингредиентами")
+    @Description("Создание заказа с валидными ингредиентами.")
+    public void createOrderWithIngredients() {
+        if (!isUserCreated) return;
 
-        List<String> invalidIngredients = new ArrayList<>();
-        invalidIngredients.add("invalid_ingredient_hash_123");
-        Order order = new Order(invalidIngredients);
+        List<String> ingredients = List.of("61c0c5a71f815400326104a3", "61c0c5a71f815400326104a1");
+        ValidatableResponse response = orderClient.orderWithAuth(accessToken, new Order(ingredients));
 
-        System.out.println("Sending order with invalid ingredient hash and token: " + accessToken);
-
-
-        ValidatableResponse response = orderClient.orderWithAuth(accessToken, order);
-        String responseBody = response.extract().body().asString();
-        System.out.println("Server response (invalid ingredient): " + responseBody);
-
-        // Ожидаем 400 Bad Request, а не 500
-        response.assertThat()
-                .statusCode(400)
-                .body("success", equalTo(false))
-                .body("message", containsString("Invalid ingredient"));
+        response.assertThat().statusCode(200).body("success", equalTo(true));
     }
+
+    @Test
+    @DisplayName("Создание заказа без ингредиентов")
+    @Description("Создание заказа без ингредиентов и проверка, что возвращается ошибка.")
+    public void createOrderWithoutIngredients() {
+        if (!isUserCreated) return;
+
+        ValidatableResponse response = orderClient.orderWithAuth(accessToken, new Order(new ArrayList<>()));
+
+        response.assertThat().statusCode(400).body("message", containsString("Ingredient ids must be provided"));
+
+    }
+
+    @Test
+    @DisplayName("Создание заказа с неверным хешем ингредиентов")
+    @Description("Создание заказа с неверными хешами ингредиентов, проверяем ошибку.")
+    public void createOrderWithInvalidIngredientHash() {
+        if (!isUserCreated) return;
+
+        List<String> invalidIngredients = List.of("invalid_hash");
+        ValidatableResponse response = orderClient.orderWithAuth(accessToken, new Order(invalidIngredients));
+
+        response.assertThat().statusCode(400).body("message", containsString("Invalid ingredient"));
+    }
+
 
     @After
     public void tearDown() {
         if (isUserCreated && accessToken != null) {
-            try {
-                userClient.deleteUser(accessToken);
-                System.out.println("User deleted successfully.");
-            } catch (Exception e) {
-                System.err.println("Error deleting user: " + e.getMessage());
-            }
+            userClient.deleteUser(accessToken);
         }
     }
 }

@@ -6,7 +6,6 @@ import org.junit.Before;
 import org.junit.Test;
 import net.datafaker.Faker;
 
-
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.hamcrest.CoreMatchers.*;
@@ -21,12 +20,7 @@ public class LoginUserTest {
     public void setUp() {
         userClient = new ClUser();
         faker = new Faker();
-    }
 
-    @Test
-    @DisplayName("Логин существующего пользователя")
-    @Description("Post запрос на ручку /api/auth/login")
-    public void loginWithUserTrueAndBody() {
         testUser = new User(
                 faker.internet().emailAddress(),
                 faker.regexify("[a-zA-Z0-9]{8,12}"),
@@ -36,6 +30,12 @@ public class LoginUserTest {
         ValidatableResponse createResponse = userClient.createUser(testUser);
         createResponse.assertThat().statusCode(HTTP_OK);
         accessToken = createResponse.extract().path("accessToken");
+    }
+
+    @Test
+    @DisplayName("Логин существующего пользователя")
+    @Description("Post запрос на ручку /api/auth/login")
+    public void loginWithUserTrueAndBody() {
 
         ValidatableResponse loginResponse = userClient.loginUser(testUser);
         loginResponse.assertThat()
@@ -51,15 +51,6 @@ public class LoginUserTest {
     @DisplayName("Логин с неверным адресом почты")
     @Description("Post запрос на ручку /api/auth/login")
     public void loginWithUserFalseAndBody() {
-        testUser = new User(
-                faker.internet().emailAddress(),
-                "secure_password_123",
-                faker.name().firstName()
-        );
-
-        ValidatableResponse createResponse = userClient.createUser(testUser);
-        createResponse.assertThat().statusCode(HTTP_OK);
-
         User invalidUser = new User(
                 "invalid_" + faker.internet().emailAddress(),
                 testUser.getPassword(),
@@ -77,18 +68,9 @@ public class LoginUserTest {
     @DisplayName("Логин под неверным паролем")
     @Description("Post запрос на ручку /api/auth/login")
     public void loginWithUserFalsePasswordAndBody() {
-        testUser = new User(
-                faker.internet().emailAddress(),
-                "secure_password_123",
-                faker.name().firstName()
-        );
-
-        ValidatableResponse createResponse = userClient.createUser(testUser);
-        createResponse.assertThat().statusCode(HTTP_OK);
-
         User invalidUser = new User(
                 testUser.getEmail(),
-                "wrong_password_" + faker.random().nextInt(100, 999), // Исправлено: random().nextInt()
+                "wrong_password_" + faker.random().nextInt(100, 999),
                 testUser.getName()
         );
 
@@ -110,4 +92,3 @@ public class LoginUserTest {
         }
     }
 }
-
