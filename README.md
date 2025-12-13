@@ -47,6 +47,11 @@
 - REST Assured 5.3+;
 - Allure Reports 2.22+.
 
+### Запуск тестов
+mvn clean test
+
+### Генерация Allure-отчета
+mvn allure:serve
 
 
 
